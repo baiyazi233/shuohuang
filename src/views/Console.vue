@@ -1,15 +1,27 @@
 <template>
     <div class="console-container">
         <!-- 左侧资产清单树（全量展示+父子结构） -->
+        <!-- 修改左侧资产清单树部分 -->
         <div class="asset-tree">
             <h3>资产清单（全量）</h3>
             <div class="tree-list">
-                <div v-for="item in mockData" :key="item.deviceNumber" class="tree-item"
-                    :style="{ marginLeft: item.parentId ? '20px' : '0' }">
-                    <!-- 父子结构标识：父节点显示展开图标，子节点缩进 -->
-                    <span v-if="!item.parentId">▸</span>
-                    <span v-else>├─</span>
-                    {{ item.deviceName }} (编号: {{ item.deviceNumber }})
+                <div v-for="item in assetList" :key="item.Id" 
+                     class="tree-item asset-item"
+                     :style="{ marginLeft: item.parentId ? '20px' : '0' }"
+                     @mouseenter="hoveredAsset = item.Id"
+                     @mouseleave="hoveredAsset = null">
+                    <span class="asset-info">
+                        {{ item.Name }} (编号: {{ item.Code }})
+                    </span>
+                    <!-- hover时显示的添加设备按钮 -->
+                    <el-button 
+                        v-show="hoveredAsset === item.Id"
+                        type="primary" 
+                        size="small" 
+                        class="hover-add-btn"
+                        @click="goToAddDevice(item)">
+                        添加设备
+                    </el-button>
                 </div>
             </div>
         </div>
@@ -20,32 +32,38 @@
             <div class="search-form">
                 <div class="form-group">
                     <label>代码：</label>
-                    <input type="text" v-model="searchForm.code" placeholder="输入代码筛选">
+                    <input type="text" v-model="searchForm.Code" placeholder="输入代码筛选">
                 </div>
                 <div class="form-group">
                     <label>名称：</label>
-                    <input type="text" v-model="searchForm.name" placeholder="输入设备名称筛选">
+                    <input type="text" v-model="searchForm.Name" placeholder="输入设备名称筛选">
                 </div>
                 <div class="form-group">
                     <label>助记码：</label>
-                    <input type="text" v-model="searchForm.mnemonic" placeholder="输入助记码筛选">
+                    <input type="text" v-model="searchForm.Mnemonic" placeholder="输入助记码筛选">
                 </div>
                 <div class="form-group">
                     <label>标签类别：</label>
-                    <input type="text" v-model="searchForm.tagCategory" placeholder="输入标签类别筛选">
+                    <input type="text" v-model="searchForm.Offset" placeholder="输入标签类别筛选">
                 </div>
             </div>
 
             <!-- 新增筛选结果表格 -->
             <div class="search-results">
                 <h4>筛选结果（共{{ filteredData.length }}条）</h4>
-                <el-table :data="displayedData" border stripe class="result-table">
-                    <el-table-column prop="deviceName" label="设备名称" align="center"></el-table-column>
-                    <el-table-column prop="deviceNumber" label="设备编号" align="center"></el-table-column>
-                    <el-table-column prop="mnemonic" label="助记码" align="center"></el-table-column>
-                    <el-table-column prop="unit" label="计量单位" align="center"></el-table-column>
-                    <el-table-column prop="code" label="代码" align="center"></el-table-column>
-                    <el-table-column prop="tagCategory" label="标签类别" align="center"></el-table-column>
+                <el-table :data="filteredData" border stripe class="result-table">
+                    <el-table-column prop="Name" label="设备名称" align="center"></el-table-column>
+                    <el-table-column prop="Code" label="设备编号" align="center"></el-table-column>
+                    <el-table-column prop="Mnemonic" label="助记码" align="center"></el-table-column>
+                    <el-table-column prop="Unit" label="计量单位" align="center"></el-table-column>
+                    <el-table-column prop="Offset" label="标签类别" align="center"></el-table-column>
+                    <el-table-column label="操作" align="center" width="120">
+                        <template #default="{ row }">
+                            <el-button type="primary" size="small" @click="goToAddDevice(row)">
+                                去添加设备
+                            </el-button>
+                        </template>
+                    </el-table-column>
                 </el-table>
 
                 <!-- 新增分页控件 -->
@@ -65,48 +83,68 @@
 </template>
 
 <script>
+import { describeAssetList } from '../api';
+
 export default {
     name: 'Console',
     data() {
         return {
-            // 调整mockData为父子结构（前5个为父节点，后续为子节点）
-            mockData: [
-                ...Array.from({ length: 5 }, (_, index) => ({
-                    deviceName: `父设备-${index + 1}`,
-                    deviceNumber: `DEV-${String(index + 1).padStart(3, '0')}`,
-                    mnemonic: `FZ${index + 1}`,
-                    unit: '台',
-                    code: `PARENT-${index + 1}`,
-                    tagCategory: '主设备',
-                    parentId: null // 父节点无父ID
-                })),
-                ...Array.from({ length: 25 }, (_, index) => ({
-                    deviceName: `子设备-${Math.floor(index / 5) + 1}-${index % 5 + 1}`,
-                    deviceNumber: `DEV-${String(index + 6).padStart(3, '0')}`,
-                    mnemonic: `CZ${index + 1}`,
-                    unit: index % 2 === 0 ? '台' : '套',
-                    code: `CHILD-${Math.floor(index / 5) + 1}-${index % 5 + 1}`,
-                    tagCategory: index % 3 === 0 ? '生产设备' : index % 3 === 1 ? '办公设备' : '测试设备',
-                    parentId: `DEV-${String(Math.floor(index / 5) + 1).padStart(3, '0')}` // 关联父节点编号
-                }))
-            ],
             searchForm: {
-                code: '',
-                name: '',
-                mnemonic: '',
-                tagCategory: ''
+                Code: '',
+                Name: '',
+                Mnemonic: '',
+                Offset: ''
             },
-            currentPage: 1, // 新增：当前页码
-            pageSize: 10 // 新增：每页显示数量
+            assetList: [],
+            totalCount: 0,
+            loading: false,
+            error: null,
+            currentOffset: 0,
+            pageSize: 10,
+            hoveredAsset: null  // 添加这个状态
         };
+    },
+    methods: {
+        async fetchAssetData() {
+            this.loading = true;
+            this.error = null;
+            try {
+                const response = await describeAssetList({
+                    Offset: this.currentOffset,
+                    // 添加其他筛选参数
+                    Name: this.searchForm.Name,
+                    Mnemonic: this.searchForm.Mnemonic
+                });
+                this.assetList = response.AssetList;
+                this.totalCount = response.TotalCount;
+            } catch (err) {
+                this.error = err.message;
+                console.error('获取资产数据失败:', err);
+            } finally {
+                this.loading = false;
+            }
+        },
+        // 新增方法：跳转到设备添加页面并传递资产ID
+        goToAddDevice(asset) {
+            // 使用路由跳转，并通过query参数传递资产Code作为AssetCode
+            this.$router.push({
+                name: 'DeviceRegistration',
+                query: {
+                    assetCode: asset.Code // 将资产Code作为AssetCode传递
+                }
+            });
+        },
+    },
+    mounted() {
+        this.fetchAssetData();
     },
     computed: {
         filteredData() {
-            return this.mockData.filter(item => {
-                const codeMatch = item.code.includes(this.searchForm.code);
-                const nameMatch = item.deviceName.includes(this.searchForm.name);
-                const mnemonicMatch = item.mnemonic.includes(this.searchForm.mnemonic);
-                const tagMatch = item.tagCategory.includes(this.searchForm.tagCategory);
+            return this.assetList.filter(item => {
+                const codeMatch = this.searchForm.Code ? item.Code.toString().includes(this.searchForm.Code.toString()) : true;
+                const nameMatch = item.Name.includes(this.searchForm.Name);
+                const mnemonicMatch = item.Mnemonic.includes(this.searchForm.Mnemonic);
+                const tagMatch = this.searchForm.Offset ? item.Offset.toString().includes(this.searchForm.Offset.toString()) : true;
                 return codeMatch && nameMatch && mnemonicMatch && tagMatch;
             });
         },
@@ -114,11 +152,17 @@ export default {
         totalPages() {
             return Math.ceil(this.filteredData.length / this.pageSize) || 1;
         },
-        // 新增：当前页显示的数据（最多10条）
-        displayedData() {
-            const start = (this.currentPage - 1) * this.pageSize;
-            const end = start + this.pageSize;
-            return this.filteredData.slice(start, end);
+    },
+    watch: {
+        currentOffset() {
+            this.fetchAssetData();
+        },
+        searchForm: {
+            handler() {
+                this.currentOffset = 0; // 重置分页
+                this.fetchAssetData();
+            },
+            deep: true
         }
     }
 };
@@ -248,5 +292,36 @@ export default {
     background: #f9fafb;
     color: #9ca3af;
     cursor: not-allowed;
+}
+
+.asset-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.3s;
+    position: relative;
+}
+
+.asset-item:hover {
+    background: #f8f9fa;
+}
+
+.asset-info {
+    flex: 1;
+}
+
+.hover-add-btn {
+    margin-left: 10px;
+    opacity: 0;
+    transform: translateX(10px);
+    transition: all 0.3s ease;
+}
+
+.asset-item:hover .hover-add-btn {
+    opacity: 1;
+    transform: translateX(0);
 }
 </style>

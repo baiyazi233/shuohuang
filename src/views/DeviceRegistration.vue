@@ -3,39 +3,57 @@
     <div class="table-header">
       <el-button type="primary" @click="handleRegiste()">设备登记</el-button>
     </div>
-    <el-table :data="deviceList" border stripe>
-      <el-table-column prop="deviceName" label="设备名称" align="center"></el-table-column>
-      <el-table-column prop="deviceId" label="设备ID" align="center"></el-table-column>
-      <el-table-column prop="manufacturer" label="设备制造商" align="center"></el-table-column>
-      <el-table-column prop="purchaseDate" label="购置日期" align="center"></el-table-column>
-      <el-table-column prop="serviceLife" label="使用年限" align="center"></el-table-column>
-      <el-table-column prop="maintenanceCount" label="维护次数" align="center"></el-table-column>
-      <el-table-column prop="maintenanceTime" label="维护时间" align="center"></el-table-column>
-      <el-table-column prop="scrapReason" label="报废原因" align="center"></el-table-column>
-      <el-table-column prop="scrapOperation" label="报废操作" align="center"></el-table-column>
-      <el-table-column prop="scrapTime" label="报废时间" align="center"></el-table-column>
+
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-state">
+      <el-loading-spinner></el-loading-spinner>
+      <p>加载设备数据中...</p>
+    </div>
+
+    <!-- 错误提示 -->
+    <div v-if="error && !loading" class="error-state">
+      <el-alert type="error" :title="error" show-icon></el-alert>
+    </div>
+
+    <!-- 设备表格 -->
+    <el-table v-if="!loading && !error" :data="deviceList" border stripe>
+      <!-- 表格列定义保持不变 -->
+      <el-table-column prop="Name" label="设备名称" align="center"></el-table-column>
+      <el-table-column prop="DeviceID" label="设备ID" align="center"></el-table-column>
+      <el-table-column prop="Manufacturer" label="设备制造商" align="center"></el-table-column>
+      <el-table-column prop="Model" label="设备型号" align="center"></el-table-column>
+      <el-table-column prop="PurchaseDate" label="购置日期" align="center"></el-table-column>
+      <el-table-column prop="LifeSpan" label="使用年限" align="center"></el-table-column>
+      <el-table-column prop="MaintainTimes" label="维护次数" align="center"></el-table-column>
+      <el-table-column prop="LastMaintainTime" label="维护时间" align="center"></el-table-column>
+      <el-table-column prop="ScrapReason" label="报废原因" align="center"></el-table-column>
+      <el-table-column prop="ScrapAction" label="报废操作" align="center"></el-table-column>
+      <el-table-column prop="ScrapTime" label="报废时间" align="center"></el-table-column>
       <el-table-column label="操作" align="center">
         <template #default="{ row }">
           <div class="operation-buttons">
-            <el-button type="primary" size="small" @click="handleMaintenance(row)">维护</el-button>
-            <el-button type="danger" size="small" @click="handleScrap(row)">报废</el-button>
+            <el-button type="primary" size="small" @click="handleMaintenanceSubmit(row)">维护</el-button>
+            <el-button type="danger" size="small" @click="handleScrapSubmit(row)">报废</el-button>
           </div>
         </template>
       </el-table-column>
     </el-table>
     <el-dialog title="设备登记" v-model="registeVisible" width="50%">
-      <el-form v-model="form" :rules="rules" ref="formRef" label-width="120px">
-        <el-form-item label="设备名称" prop="deviceName">
-          <el-input v-model="form.deviceName"></el-input>
+      <el-form :model="form" :rules="rules" ref="formRef" label-width="120px">
+        <el-form-item label="设备名称" prop="Name">
+          <el-input v-model="form.Name"></el-input>
         </el-form-item>
-        <el-form-item label="设备制造商" prop="manufacturer">
-          <el-input v-model="form.manufacturer"></el-input>
+        <el-form-item label="设备制造商" prop="Manufacturer">
+          <el-input v-model="form.Manufacturer"></el-input>
         </el-form-item>
-        <el-form-item label="购置日期" prop="purchaseDate">
-          <el-date-picker v-model="form.purchaseDate" type="date" placeholder="选择日期"></el-date-picker>
+        <el-form-item label="设备型号" prop="Model">
+          <el-input v-model="form.Model"></el-input>
         </el-form-item>
-        <el-form-item label="使用年限" prop="serviceLife">
-          <el-input type="number" v-model="form.serviceLife"></el-input>
+        <el-form-item label="购置日期" prop="PurchaseDate">
+          <el-date-picker v-model="form.PurchaseDate" type="date" placeholder="选择日期"></el-date-picker>
+        </el-form-item>
+        <el-form-item label="使用年限" prop="LifeSpan">
+          <el-input type="number" v-model="form.LifeSpan"></el-input>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -48,7 +66,7 @@
 
     <!-- 维护信息弹窗 -->
     <el-dialog title="维护登记" v-model="maintenanceDialogVisible" width="50%">
-      <el-form v-model="maintenanceForm" :rules="maintenanceRules" ref="maintenanceFormRef" label-width="120px">
+      <el-form :model="maintenanceForm" :rules="maintenanceRules" ref="maintenanceFormRef" label-width="120px">
         <el-form-item label="维护内容" prop="content">
           <el-input v-model="maintenanceForm.content"></el-input>
         </el-form-item>
@@ -66,7 +84,7 @@
 
     <!-- 报废信息弹窗 -->
     <el-dialog title="报废登记" v-model="scrapDialogVisible" width="50%">
-      <el-form v-model="scrapForm" :rules="scrapRules" ref="scrapFormRef" label-width="120px">
+      <el-form :model="scrapForm" :rules="scrapRules" ref="scrapFormRef" label-width="120px">
         <el-form-item label="报废原因" prop="reason">
           <el-input v-model="scrapForm.reason"></el-input>
         </el-form-item>
@@ -91,73 +109,70 @@
 .device-registration {
   padding: 20px;
 }
+
 .table-header {
   margin-bottom: 15px;
   display: flex;
   justify-content: flex-end;
 }
+
 .el-table {
   margin-top: 15px;
 }
+
 .operation-buttons {
   display: flex;
   gap: 8px;
   justify-content: center;
 }
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px;
+}
+
+.error-state {
+  margin-bottom: 15px;
+}
 </style>
-    <script>
-import { ref } from 'vue';
-import { registerDevice } from '../api';
+<script>
+import { ref, onMounted } from 'vue';
+import { createDeviceInfo, describeDeviceBasicInfoList } from '../api';
+import { useRoute, useRouter } from 'vue-router'; // 导入路由相关函数
+import { ElMessageBox } from 'element-plus';
 
 export default {
   name: 'DeviceRegistration',
   setup() {
-    const deviceList = ref([
-  {
-    deviceName: '服务器A',
-    deviceId: 'DEV001',
-    manufacturer: '华为',
-    purchaseDate: '2023-01-15',
-    serviceLife: 5,
-    maintenanceCount: 2,
-    maintenanceTime: '2024-03-20 14:30',
-    scrapReason: '',
-    scrapOperation: '',
-    scrapTime: null
-  },
-  {
-    deviceName: '交换机B',
-    deviceId: 'DEV002',
-    manufacturer: '思科',
-    purchaseDate: '2022-08-20',
-    serviceLife: 3,
-    maintenanceCount: 1,
-    maintenanceTime: '2024-02-10 09:15',
-    scrapReason: '老化',
-    scrapOperation: '已报废',
-    scrapTime: '2024-05-01 10:00'
-  }
-]); // mock设备列表数据
+    const route = useRoute(); // 获取当前路由
+    const router = useRouter(); // 获取路由实例
+    const deviceList = ref([]);
+    const loading = ref(false);
+    const error = ref(null);
     const registeVisible = ref(false);
+    const formRef = ref(null); // 创建表单引用
     const form = ref({
-      deviceName: '',
-      deviceId: '',
-      manufacturer: '',
-      purchaseDate: null,
-      serviceLife: 0,
-      maintenanceCount: 0,
-      maintenanceTime: null,
-      scrapReason: '',
-      scrapOperation: '',
-      scrapTime: null
+      Name: '',
+      Model: '',
+      DeviceID: '',
+      Manufacturer: '',
+      PurchaseDate: null,
+      LifeSpan: 0,
+      MaintainTimes: 0,
+      LastMaintainTime: null,
+      ScrapReason: '',
+      ScrapAction: '',
+      ScrapTime: null,
+      AssetCode: ''
     });
     const rules = ref({
-      deviceName: [{ required: true, message: '请输入设备名称', trigger: 'blur' }],
-      deviceId: [{ required: true, message: '请输入设备ID', trigger: 'blur' }],
-      manufacturer: [{ required: true, message: '请输入设备制造商', trigger: 'blur' }]
+      Name: [{ required: true, message: '请输入设备名称', trigger: 'blur' }],
+      DeviceID: [{ required: true, message: '请输入设备ID', trigger: 'blur' }],
+      Manufacturer: [{ required: true, message: '请输入设备制造商', trigger: 'blur' }],
+      Model: [{ required: true, message: '请输入设备型号', trigger: 'blur' }]
     });
-
-    const formRef = ref(null); // 创建表单引用
 
     const maintenanceDialogVisible = ref(false);
     const scrapDialogVisible = ref(false);
@@ -168,17 +183,53 @@ export default {
     const maintenanceFormRef = ref(null);
     const scrapFormRef = ref(null);
 
+    // 页面加载时获取设备列表
+    onMounted(() => {
+      // 检查是否有AssetCode参数
+      if (!route.query.assetCode) {
+        // 显示提示信息，引导用户返回控制台
+        ElMessageBox.confirm(
+          '请先从控制台选择资产后再进行设备登记',
+          '提示',
+          {
+            confirmButtonText: '返回控制台',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        ).then(() => {
+          // 用户点击确认，跳转到控制台
+          router.push({ name: 'Console' });
+        }).catch(() => {
+          // 用户点击取消，也跳转到控制台
+          router.push({ name: 'Console' });
+        });
+        return;
+      }
+
+      // 从路由参数中获取AssetCode
+      form.value.AssetCode = route.query.assetCode;
+      fetchDeviceList();
+    });
+
+    // 获取设备列表数据
+    const fetchDeviceList = async () => {
+      loading.value = true;
+      error.value = null;
+      try {
+        const response = await describeDeviceBasicInfoList({
+          AssetCode: form.value.AssetCode,
+          PageNum: 1
+        });
+        deviceList.value = response?.DeviceBasicInfoList || [];
+      } catch (err) {
+        error.value = `获取设备列表失败: ${err.message}`;
+      } finally {
+        loading.value = false;
+      }
+    };
+
     const handleRegiste = () => {
       registeVisible.value = true;
-    };
-
-
-    const handleMaintenance = (row) => {
-      maintenanceDialogVisible.value = true;
-    };
-
-    const handleScrap = (row) => {
-      scrapDialogVisible.value = true;
     };
 
     const handleMaintenanceSubmit = async () => {
@@ -209,47 +260,58 @@ export default {
       });
     };
 
+    // 设备登记提交处理
     const handleSubmit = async () => {
       formRef.value?.validate(async (valid) => {
         if (!valid) return;
         try {
-          await registerDevice(form.value);
+          await createDeviceInfo(form.value);
           registeVisible.value = false;
-          // 清空表单
+          // 重置表单
           form.value = {
-            deviceName: '',
-            deviceId: '',
-            manufacturer: '',
-            purchaseDate: null,
-            serviceLife: 0,
-            maintenanceCount: 0,
-            maintenanceTime: null,
-            scrapReason: '',
-            scrapOperation: '',
-            scrapTime: null
+            AssetCode: form.value.AssetCode,
+            Name: '',
+            DeviceID: '',
+            Manufacturer: '',
+            PurchaseDate: null,
+            LifeSpan: 0,
+            MaintainTimes: 0,
+            LastMaintainTime: null,
+            ScrapReason: '',
+            ScrapAction: '',
+            ScrapTime: null
           };
-          // 实际应调用获取设备列表接口刷新数据
+          // 提交成功后刷新列表
+          fetchDeviceList();
         } catch (error) {
           console.error('设备登记失败:', error);
+          // 显示错误提示
+          error.value = error.message;
         }
       });
     };
 
     return {
+      deviceList,
+      loading,
+      error,
+      registeVisible,
       maintenanceDialogVisible,
       scrapDialogVisible,
       maintenanceForm,
       scrapForm,
       maintenanceRules,
       scrapRules,
+      maintenanceFormRef,
+      scrapFormRef,
+      formRef,
       handleRegiste,
-      handleMaintenance,
-      handleScrap,
-      deviceList,
-      registeVisible,
       form,
       rules,
-      handleSubmit
+      handleSubmit,
+      handleMaintenanceSubmit,
+      handleScrapSubmit,
+      fetchDeviceList
     };
   }
 };

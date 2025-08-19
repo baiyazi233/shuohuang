@@ -1,0 +1,15 @@
+{
+    "blockchain": {
+        "peer_count": 1,
+        "orderer_count": 1
+    },
+    "mysql": {
+        "host": "127.0.0.1",
+        "port": 3306,
+        "dbname": "demo",
+        "user": "root",
+        "passwd": "12345678",
+        "charset": "utf8",
+        "pool_recycle": 30
+    }
+}
