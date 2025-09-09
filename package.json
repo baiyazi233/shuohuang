@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@rollup/rollup-darwin-arm64": "^4.41.1",
+    "rollup": "^4.41.1",
     "axios": "^1.10.0",
     "element-plus": "^2.10.4",
     "vue": "^3.5.13",
