@@ -4,8 +4,14 @@ import Console from '../views/Console.vue';
 import DeviceRegistration from '../views/DeviceRegistration.vue';
 import WarningManagement from '../views/WarningManagement.vue';
 import WarningSettings from '../views/WarningSettings.vue';
+import Login from '../views/Login.vue';
 
 const routes = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login
+  },
   {
     path: '/',
     name: 'Home',

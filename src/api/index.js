@@ -248,3 +248,44 @@ export const saveWarningSettings = (settings) => {
     }, 500);
   });
 };
+
+/**
+ * 用户登录
+ * @param {Object} params - 请求参数
+ * @param {string} params.username - 用户名
+ * @param {string} params.phone - 手机号
+ * @returns {Promise<Object>} 登录响应
+ */
+export function userLogin(params) {
+  return request({
+    url: '',
+    method: 'post',
+    data: {
+      Action: 'UserLogin',
+      ...params
+    }
+  }).then(response => {
+    return response;
+  });
+}
+
+/**
+ * 用户注册
+ * @param {Object} params - 请求参数
+ * @param {string} params.username - 用户名
+ * @param {string} params.phone - 手机号
+ * @param {string} params.password - 密码
+ * @returns {Promise<Object>} 注册响应
+ */
+export function userRegister(params) {
+  return request({
+    url: '',
+    method: 'post',
+    data: {
+      Action: 'UserRegister',
+      ...params
+    }
+  }).then(response => {
+    return response;
+  });
+}
