@@ -157,26 +157,45 @@ const fetchWarningList = async () => {
   try {
     const response = await describeAwarenessList({
       Content: searchForm.value.content,
-      Status: searchForm.value.status !== '-1' ? [parseInt(searchForm.value.status)] : [-1],
-      Type: searchForm.value.type !== '-1' ? [parseInt(searchForm.value.type)] : [-1],
-      StartTime: searchForm.value.timeRange[0]?.toISOString(),
-      EndTime: searchForm.value.timeRange[1]?.toISOString(),
+      Status: searchForm.value.status !== '-1' ? [parseInt(searchForm.value.status)] : undefined,
+      Type: searchForm.value.type !== '-1' ? [parseInt(searchForm.value.type)] : undefined,
+      StartTime: searchForm.value.timeRange && searchForm.value.timeRange[0] ? searchForm.value.timeRange[0].toISOString() : undefined,
+      EndTime: searchForm.value.timeRange && searchForm.value.timeRange[1] ? searchForm.value.timeRange[1].toISOString() : undefined,
       Offset: (currentPage.value - 1) * pageSize.value,
-      PageSize: pageSize.value
+      Limit: pageSize.value
     });
-    // 转换API返回数据格式以匹配表格需求
-    awarenessList.value = (response.AwarenessList || []).map(item => ({
-      id: item.Id,
-      content: item.Content,
-      time: formatDate(item.AwareTime),
-      type: item.Type,
-      typeLabel: getTypeLabel(item.Type),
-      status: item.Status,
-      statusLabel: getStatusLabel(item.Status),
-      assignee: item.Assignee || '未分配',
-      assignTime: item.AssignTime ? formatDate(item.AssignTime) : '未分配'
-    }));
-    totalCount.value = response.TotalCount || 0;
+    
+    // 适配 mock 数据格式
+    if (response.code === 0 && response.data) {
+      // 使用 mock 数据的格式
+      awarenessList.value = (response.data.list || []).map(item => ({
+        id: item.id,
+        content: item.content,
+        time: item.time, // mock 数据已经格式化了时间
+        type: item.type,
+        typeLabel: item.typeName || getTypeLabel(item.type),
+        status: item.status,
+        statusLabel: item.statusName || getStatusLabel(item.status),
+        assignee: item.assignee || '未分配',
+        assignTime: item.assignTime || '未分配'
+      }));
+      totalCount.value = response.data.total || 0;
+    } else {
+      // 兼容旧的 API 格式
+      awarenessList.value = (response.AwarenessList || []).map(item => ({
+        id: item.Id,
+        content: item.Content,
+        time: formatDate(item.AwareTime),
+        type: item.Type,
+        typeLabel: getTypeLabel(item.Type),
+        status: item.Status,
+        statusLabel: getStatusLabel(item.Status),
+        assignee: item.Assignee || '未分配',
+        assignTime: item.AssignTime ? formatDate(item.AssignTime) : '未分配'
+      }));
+      totalCount.value = response.TotalCount || 0;
+    }
+    
     console.log('awarenessList', awarenessList.value);
   } catch (err) {
     error.value = `获取预警数据失败: ${err.message}`;

@@ -206,8 +206,8 @@ export default {
         return;
       }
 
-      // 从路由参数中获取AssetCode
-      form.value.AssetCode = route.query.assetCode;
+      // 从路由参数中获取AssetCode并转换为整数
+      form.value.AssetCode = parseInt(route.query.assetCode, 10);
       fetchDeviceList();
     });
 
@@ -265,7 +265,29 @@ export default {
       formRef.value?.validate(async (valid) => {
         if (!valid) return;
         try {
-          await createDeviceInfo(form.value);
+          // 确保 AssetCode 和 LifeSpan 是整数类型并格式化日期
+          const formData = {...form.value};
+          formData.AssetCode = parseInt(formData.AssetCode, 10);
+          formData.LifeSpan = parseInt(formData.LifeSpan, 10) || 0;
+          formData.DeviceID = Date.now().toString();
+          
+          // 格式化日期为 "YYYY-MM-DD 00:00:00" 格式
+          if (formData.PurchaseDate) {
+            const date = new Date(formData.PurchaseDate);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            formData.PurchaseDate = `${year}-${month}-${day} 00:00:00`;
+          } else {
+            // 如果日期为空，设置为当前日期
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            formData.PurchaseDate = `${year}-${month}-${day} 00:00:00`;
+          }
+          
+          await createDeviceInfo(formData);
           registeVisible.value = false;
           // 重置表单
           form.value = {
